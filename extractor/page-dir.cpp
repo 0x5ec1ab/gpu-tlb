@@ -57,8 +57,9 @@ PageDir::constructTrans()
       std::uint64_t nPhyAddr = addrHuge << 12;
       std::int64_t offset = nPhyAddr - mPhyAddr;
       const std::uint8_t *nDumpPtr = mDumpPtr + offset;
+
       
-      Trans *next = new Page(nDumpPtr, nPhyAddr, HUGE);
+      Trans *next = new Page(nDumpPtr, nPhyAddr, HUGE, *entLargePtr);
       mPageDirEnts[i] = std::make_pair(nullptr, next);
       continue;
     }
