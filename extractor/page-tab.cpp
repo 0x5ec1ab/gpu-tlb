@@ -1,5 +1,7 @@
 #include "page-tab.h"
 
+bool printed = false;
+
 /*******************************************************************************
  *
  ******************************************************************************/
@@ -40,12 +42,12 @@ PageTab::constructTrans()
       continue;
     else if (flag != 0x01)
       return false;
-    
+
     std::uint64_t nPhyAddr = addr << 12;
     std::int64_t offset = nPhyAddr - mPhyAddr;
     const std::uint8_t *nDumpPtr = mDumpPtr + offset;
     
-    Trans *next = new Page(nDumpPtr, nPhyAddr, mPageType);
+    Trans *next = new Page(nDumpPtr, nPhyAddr, mPageType, entPtr[0]);
     mPageTabEnts[i] = next;
   }
   
