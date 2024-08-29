@@ -1,0 +1,144 @@
+diff --color -urN NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_api.h NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_api.h
+--- NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_api.h	2024-08-17 00:20:22.000000000 +0200
++++ NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_api.h	2024-08-28 16:09:47.226116252 +0200
+@@ -257,4 +257,7 @@
+ NV_STATUS uvm_api_alloc_semaphore_pool(UVM_ALLOC_SEMAPHORE_POOL_PARAMS *params, struct file *filp);
+ NV_STATUS uvm_api_populate_pageable(const UVM_POPULATE_PAGEABLE_PARAMS *params, struct file *filp);
+ 
++// added by zzk for dumping GPU memory
++NV_STATUS uvm_api_dump_gpu_memory(UVM_DUMP_GPU_MEMORY_PARAMS *params, struct file *filp);
++
+ #endif // __UVM_API_H__
+diff --color -urN NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm.c NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm.c
+--- NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm.c	2024-08-17 00:20:20.000000000 +0200
++++ NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm.c	2024-08-28 16:10:40.263983019 +0200
+@@ -1001,6 +1001,9 @@
+         UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_CLEAN_UP_ZOMBIE_RESOURCES,      uvm_api_clean_up_zombie_resources);
+         UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_POPULATE_PAGEABLE,              uvm_api_populate_pageable);
+         UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_VALIDATE_VA_RANGE,              uvm_api_validate_va_range);
++
++        // added by zzk for dumping GPU memory
++        UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_DUMP_GPU_MEMORY,                uvm_api_dump_gpu_memory);
+     }
+ 
+     // Try the test ioctls if none of the above matched
+diff --color -urN NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_ioctl.h NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_ioctl.h
+--- NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_ioctl.h	2024-08-17 00:20:17.000000000 +0200
++++ NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_ioctl.h	2024-08-28 16:11:45.855488998 +0200
+@@ -1114,6 +1114,16 @@
+     NV_STATUS rmStatus;     // OUT
+ } UVM_IS_8_SUPPORTED_PARAMS;
+ 
++// added by zzk for dumping GPU memory
++#define UVM_DUMP_GPU_MEMORY                                           UVM_IOCTL_BASE(111)
++typedef struct
++{
++    NvProcessorUuid gpu_uuid;                      // IN
++    NvU64           base_addr  NV_ALIGN_BYTES(8);  // IN
++    NvU64           dump_size;                     // IN
++    NvU64           out_addr   NV_ALIGN_BYTES(8);  // OUT
++    NV_STATUS       rmStatus;                      // OUT
++} UVM_DUMP_GPU_MEMORY_PARAMS;
+ 
+ #ifdef __cplusplus
+ }
+diff --color -urN NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_tools.c NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_tools.c
+--- NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_tools.c	2024-08-17 00:20:20.000000000 +0200
++++ NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_tools.c	2024-08-28 16:13:09.130805871 +0200
+@@ -2862,3 +2862,82 @@
+ 
+     _uvm_tools_destroy_cache_all();
+ }
++
++// added by zzk for dumping GPU memory
++NV_STATUS 
++uvm_api_dump_gpu_memory(UVM_DUMP_GPU_MEMORY_PARAMS *params, struct file *filp)
++{
++    NvU64 base_addr = params->base_addr;
++    NvU64 dump_size = params->dump_size;
++    NvU64 out_addr = params->out_addr;
++    NvU64 offset;
++    
++    uvm_mem_t *cpu_mem = NULL;
++    uvm_mem_t *gpu_mem = NULL;
++    uvm_gpu_address_t cpu_addr;
++    uvm_gpu_address_t gpu_addr;
++    
++    uvm_gpu_t *gpu;
++    uvm_push_t push;
++    
++    NV_STATUS status = NV_OK;
++    
++    //NvU64 gpuSize = UVM_CHUNK_SIZE_MAX;
++    
++    // get GPU from the passed UUID
++    gpu = uvm_gpu_get_by_uuid(&params->gpu_uuid);
++    if (!gpu)
++        return NV_ERR_INVALID_DEVICE;
++    
++    // allocate a CPU memory buffer and map it for access
++    status = uvm_mem_alloc_sysmem_and_map_cpu_kernel(UVM_CHUNK_SIZE_MAX, current->mm, &cpu_mem);
++    if (status != NV_OK)
++        goto done;
++    status = uvm_mem_map_gpu_kernel(cpu_mem, gpu);
++    if (status != NV_OK)
++        goto done;
++    
++    // allocate a small piece of GPU memory and map it for access
++    status = uvm_mem_alloc_vidmem(UVM_CHUNK_SIZE_4K, gpu, &gpu_mem);
++    if (status != NV_OK)
++        goto done;
++    status = uvm_mem_map_gpu_kernel(gpu_mem, gpu);
++    if (status != NV_OK)
++        goto done;
++    printk("GPU mem chunk size 0x%lx\n", gpu_mem->chunk_size);
++    
++    cpu_addr = uvm_mem_gpu_address_virtual_kernel(cpu_mem, gpu);
++    gpu_addr = uvm_mem_gpu_address_physical(gpu_mem, gpu, 0, gpu_mem->chunk_size);
++    printk("GPU mem address 0x%lx\n", gpu_addr.address);
++    
++    // dump GPU memory from the base_addr for the size of dump_size
++    gpu_addr.address = base_addr;
++    offset = 0;
++    while (offset < dump_size) {
++        size_t cpy_size = min(UVM_CHUNK_SIZE_MAX, dump_size - offset);
++        
++        status = uvm_push_begin(gpu->channel_manager, UVM_CHANNEL_TYPE_GPU_TO_CPU, &push, "dumping");
++        if (status != NV_OK)
++            goto done;
++        
++        gpu->parent->ce_hal->memcopy(&push, cpu_addr, gpu_addr, cpy_size);
++        
++        status = uvm_push_end_and_wait(&push);
++        if (status != NV_OK)
++            goto done;
++        
++        // copy stuff in the buffer into userspace
++        copy_to_user((void *)out_addr, cpu_mem->kernel.cpu_addr, cpy_size);
++        gpu_addr.address += cpy_size;
++        out_addr += cpy_size;
++        offset += cpy_size;
++    }
++    
++done:
++    if (cpu_mem)
++        uvm_mem_free(cpu_mem);
++    if (gpu_mem)
++        uvm_mem_free(gpu_mem);
++    
++    return status;
++}
+diff --color -urN NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_tools.h NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_tools.h
+--- NVIDIA-Linux-x86_64-560.35.03/kernel/nvidia-uvm/uvm_tools.h	2024-08-17 00:20:20.000000000 +0200
++++ NVIDIA-Linux-x86_64-560.35.03-patched/kernel/nvidia-uvm/uvm_tools.h	2024-08-28 16:13:38.284830352 +0200
+@@ -40,6 +40,10 @@
+ NV_STATUS uvm_api_tools_get_processor_uuid_table(UVM_TOOLS_GET_PROCESSOR_UUID_TABLE_PARAMS *params, struct file *filp);
+ NV_STATUS uvm_api_tools_flush_events(UVM_TOOLS_FLUSH_EVENTS_PARAMS *params, struct file *filp);
+ 
++// added by zzk for dumping GPU memory
++NV_STATUS uvm_api_dump_gpu_memory(UVM_DUMP_GPU_MEMORY_PARAMS *params, struct file *filp);
++
++
+ static UvmEventFatalReason uvm_tools_status_to_fatal_fault_reason(NV_STATUS status)
+ {
+     switch (status) {

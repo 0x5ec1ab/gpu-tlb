@@ -2,38 +2,50 @@ This GPU memory dumper works on **Ubuntu 20.04**.
 
 ---
 
-First, download the driver installer (version 515.76):
+First, chose a supported version and set the environment variable accordingly:
+
+- `export NV_DRV_VERSION=515.76`
+- `export NV_DRV_VERSION=535.113`
+- `export NV_DRV_VERSION=555.58.02`
+- `export NV_DRV_VERSION=560.35.03`
+
+> If the version you want to use is not supported, you can try to apply the closest patch, but this might not work if one of the files to be patched has been modified.
+> In that case, you should patch it manually by just adding the functions and the definitions you can find in one of the patches.
+> Unless NVIDIA pushes a breaking change in the UVM APIs, this patch should be easibily applicable to all versions.
+> If you manage to patch a different version of the driver, **you are welcome to create a pull request** containing the new patch file and the updated list of versions in this readme.
+
+Then, download the driver installer:
 
 ```
-wget https://us.download.nvidia.com/XFree86/Linux-x86_64/515.76/NVIDIA-Linux-x86_64-515.76.run 
+wget https://us.download.nvidia.com/XFree86/Linux-x86_64/$NV_DRV_VERSION/NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run 
 ```
 
-This will download the installer named `NVIDIA-Linux-x86_64-515.76.run` to your current directory.
+This will download the installer named `NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run` to your current directory.
 
 Then, make the installer executable:
 
 ```
-chmod +x NVIDIA-Linux-x86_64-515.76.run
+chmod +x NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run
 ```
 
 Run the following command to extract files from the executable:
 
 ```
-./NVIDIA-Linux-x86_64-515.76.run -x
+./NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run -x
 ```
 
-There will be a new directory named `NVIDIA-Linux-x86_64-515.76` under your current working directory. 
+There will be a new directory named `NVIDIA-Linux-x86_64-$NV_DRV_VERSION` under your current working directory. 
 
-Go into `NVIDIA-Linux-x86_64-515.76`:
+Go into `NVIDIA-Linux-x86_64-$NV_DRV_VERSION`:
 
 ```
-cd NVIDIA-Linux-x86_64-515.76/
+cd NVIDIA-Linux-x86_64-$NV_DRV_VERSION/
 ```
 
 Apply the patch:
 
 ```
-patch -p1 < path_to_dumper/patch/driver-515.76.patch
+patch -p1 < path_to_dumper/patch/driver-$NV_DRV_VERSION.patch
 ```
 
 Install the patched driver:
@@ -46,7 +58,9 @@ sudo ./nvidia-installer
 
 After the modified driver is installed, under the mem-dumper directory, compile the dumper:
 
-```
+```bash
+export CUDA_PATH=/path/to/cuda # if not already defined, such as /usr/local/cuda
+export NVIDIA_DRIVER_PATH=/path/to/the/patched/driver
 make
 ```
 
