@@ -4,11 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
+#include "mem-dump.h"
 #include "trans.h"
 #include "page-map.h"
 #include "page-dir.h"
@@ -26,25 +22,13 @@ main(int argc, char *argv[])
     return -1;
   }
   
-  int fd = open(argv[1], O_RDONLY);
-  if (fd < 0) {
-    std::cout << "cannot open " << argv[1] << std::endl;
-    return -1;
-  }
-  
-  struct stat st;
-  fstat(fd, &st);
-  
-  void *basePtr = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (basePtr == MAP_FAILED) {
-    std::cout << "cannot mmap " << argv[1] << std::endl;
-    return -1;
-  }
+  MemDump dump(argv[1]);
+  std::uint64_t chunkNum = dump.getChunkNum();
   
   std::vector<Trans *> pageMaps;
-  for (std::uint64_t offset = 0; offset < st.st_size; offset += 4096) {
-    const std::uint8_t *dumpPtr = (std::uint8_t *)basePtr + offset;
-    Trans *topPtr = new PageMap(dumpPtr, offset, PD3);
+  for (std::uint64_t i = 0; i < chunkNum; ++i) {
+    std::uint64_t phyAddr = i * CHUNK_SIZE;
+    Trans *topPtr = new PageMap(dump, phyAddr, PD3);
     bool ok = topPtr->constructTrans();
     if (!ok)
       delete topPtr;

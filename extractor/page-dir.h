@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 
+#include "mem-dump.h"
 #include "trans.h"
 #include "page-tab.h"
 #include "page.h"
@@ -15,7 +16,7 @@ class PageDir : public Trans {
   std::map<int, std::pair<Trans *, Trans *>> mPageDirEnts;
   
 public:
-  PageDir(const std::uint8_t *, std::uint64_t, TransType);
+  PageDir(MemDump &, std::uint64_t, TransType);
   
   ~PageDir();
   

@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <string>
 
+#include "mem-dump.h"
 #include "trans.h"
 
 /*******************************************************************************
@@ -13,7 +14,7 @@
  ******************************************************************************/
 class Page : public Trans {    
 public:
-  Page(const std::uint8_t *ptr, std::uint64_t addr, TransType type, std::uint8_t flags);
+  Page(MemDump &, std::uint64_t addr, TransType type, std::uint8_t flags);
   
   ~Page();
   

@@ -3,8 +3,8 @@
 /*******************************************************************************
  *
  ******************************************************************************/
-PageMap::PageMap(const std::uint8_t *ptr, std::uint64_t addr, TransType type) : 
-    Trans(ptr, addr, type)
+PageMap::PageMap(MemDump &dump, std::uint64_t addr, TransType type) : 
+    Trans(dump, addr, type)
 { }
 
 /*******************************************************************************
@@ -27,42 +27,45 @@ PageMap::constructTrans()
   int entSize = 4096 / entNum;
   
   for (int i = 0; i < entNum; ++i) {
-    const std::uint8_t *entPtr = mDumpPtr + i * entSize;
+    std::uint64_t offset = mPhyAddr + i * entSize;
     
     // a valid entry has zeros for most bytes
-    for (int j = 5; j < entSize; ++j)
-      if (entPtr[j] != 0)
-        return false;
+    for (int j = 5; j < entSize; ++j) {
+      std::uint8_t byteVal = mMemDump.getByte(offset + j);
+      if (byteVal != 0)
+        continue;
+    }
     
     std::uint64_t addr = 0;
-    for (int j = 0; j < 5; ++j)
-      addr |= entPtr[j] << (j * 8);
+    for (int j = 0; j < 5; ++j) {
+      std::uint8_t byteVal = mMemDump.getByte(offset + j);
+      addr |= byteVal << (j * 8);
+    }
     addr &= 0x0000000FFFFFFFFF;
     addr >>= 8;
     
-    std::uint8_t flag = *entPtr & 0x07;
+    std::uint8_t flag = mMemDump.getByte(offset);
+    flag &= 0x07;
     
     if (flag == 0x00 && addr == 0)
       continue;
     else if (flag != 0x02)
-      return false;
+      continue;
     
     // construct the next-level trans
     TransType nTransType = mTransType == PD3 ? PD2 : 
                            mTransType == PD2 ? PD1 : PD0;
     std::uint64_t nPhyAddr = addr << 12;
-    std::int64_t offset = nPhyAddr - mPhyAddr;
-    const std::uint8_t *nDumpPtr = mDumpPtr + offset;
     
     Trans *next = nullptr;
     if (nTransType == PD0)
-      next = new PageDir(nDumpPtr, nPhyAddr, nTransType);
+      next = new PageDir(mMemDump, nPhyAddr, nTransType);
     else
-      next = new PageMap(nDumpPtr, nPhyAddr, nTransType);
+      next = new PageMap(mMemDump, nPhyAddr, nTransType);
     bool ok = next->constructTrans();
     if (!ok) {
       delete next;
-      return false;
+      continue;
     }
     
     mPageMapEnts[i] = next;

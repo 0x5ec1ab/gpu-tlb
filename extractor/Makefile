@@ -1,6 +1,6 @@
 CXX = g++ 
 CXXFLAGS = -g -std=c++11
-SRCS = main.cpp page-tab.cpp page-dir.cpp page-map.cpp page.cpp
+SRCS = main.cpp mem-dump.cpp page-tab.cpp page-dir.cpp page-map.cpp page.cpp
 OBJS = $(SRCS:.cpp=.o)
 BIN = extractor
 

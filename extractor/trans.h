@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "mem-dump.h"
+
 /*******************************************************************************
  *
  ******************************************************************************/
@@ -29,14 +31,14 @@ enum PTEAperture {
  ******************************************************************************/
 class Trans {
 protected:
-  const std::uint8_t *  mDumpPtr;
-  std::uint64_t         mPhyAddr;
-  TransType             mTransType;
-  std::uint8_t          mFlags;
-    
+  MemDump &     mMemDump;
+  std::uint64_t mPhyAddr;
+  TransType     mTransType;
+  std::uint8_t  mFlag;
+  
 public:
-  Trans(const std::uint8_t *ptr, std::uint64_t addr, TransType type, std::uint8_t flags = 0) : 
-      mDumpPtr(ptr), mPhyAddr(addr), mTransType(type), mFlags(flags) { }
+  Trans(MemDump &dump, std::uint64_t addr, TransType type, std::uint8_t flag = 0) : 
+      mMemDump(dump), mPhyAddr(addr), mTransType(type), mFlag(flag) { }
   
   virtual 
   ~Trans() { }

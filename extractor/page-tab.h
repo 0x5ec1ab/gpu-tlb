@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 
+#include "mem-dump.h"
 #include "trans.h"
 #include "page.h"
 
@@ -15,7 +16,7 @@ class PageTab : public Trans {
   std::map<int, Trans *>  mPageTabEnts;
   
 public:
-  PageTab(const std::uint8_t *, std::uint64_t, TransType, TransType);
+  PageTab(MemDump &, std::uint64_t, TransType, TransType);
   
   ~PageTab();
   
