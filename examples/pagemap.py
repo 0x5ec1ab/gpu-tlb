@@ -14,8 +14,10 @@ def retrieve_ptes(pagemap):
       idx = int(parts[0])
       parts = parts[1].split('@')
       addrs = parts[1].split('VA:')
-      pa = int(addrs[0], 16)
-      va = int(addrs[1], 16)
+      pa_str = addrs[0].strip()
+      va_str = addrs[1].strip().split()[0]
+      pa = int(pa_str, 16)
+      va = int(va_str, 16)
       epa = tabs[0] + 16 * idx if '2MB' in ent else tabs[1] + 8 * idx
       ptes[va] = [pa, epa]
   return ptes
