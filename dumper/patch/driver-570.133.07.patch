@@ -1,6 +1,6 @@
 diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_api.h NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_api.h
 --- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_api.h	2025-03-14 13:57:33.000000000 +0100
-+++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_api.h	2025-04-13 17:25:47.635058754 +0200
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_api.h	2025-04-14 18:22:52.985707593 +0200
 @@ -260,4 +260,7 @@
  NV_STATUS uvm_api_alloc_device_p2p(UVM_ALLOC_DEVICE_P2P_PARAMS *params, struct file *filp);
  NV_STATUS uvm_api_clear_all_access_counters(UVM_CLEAR_ALL_ACCESS_COUNTERS_PARAMS *params, struct file *filp);
@@ -11,7 +11,7 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
  #endif // __UVM_API_H__
 diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm.c NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm.c
 --- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm.c	2025-03-14 13:57:31.000000000 +0100
-+++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm.c	2025-04-13 17:25:47.634059146 +0200
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm.c	2025-04-14 18:22:52.984707604 +0200
 @@ -1090,6 +1090,10 @@
          UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_TOOLS_GET_PROCESSOR_UUID_TABLE_V2,uvm_api_tools_get_processor_uuid_table_v2);
          UVM_ROUTE_CMD_STACK_INIT_CHECK(UVM_ALLOC_DEVICE_P2P,               uvm_api_alloc_device_p2p);
@@ -23,10 +23,30 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
      }
  
      // Try the test ioctls if none of the above matched
+diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_gpu.c NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_gpu.c
+--- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_gpu.c	2025-03-14 13:57:31.000000000 +0100
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_gpu.c	2025-04-14 18:22:52.988707562 +0200
+@@ -1512,6 +1512,8 @@
+              parent_uuid_buffer,
+              gi_uuid_buffer);
+ 
++    printk(KERN_INFO "init_gpu gpu->name: %s\n", gpu->name);
++
+     // Initialize the per-GPU procfs dirs as early as possible so that other
+     // parts of the driver can add files in them as part of their per-GPU init.
+     status = init_procfs_dirs(gpu);
+@@ -2881,6 +2883,7 @@
+     if (status != NV_OK)
+         goto error_unregister;
+ 
++
+     if (parent_gpu != NULL) {
+         // If the UUID has been seen before, and if SMC is enabled, then check
+         // if this specific partition has been seen previously. The UUID-based
 diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_ioctl.h NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_ioctl.h
 --- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_ioctl.h	2025-03-14 13:57:27.000000000 +0100
-+++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_ioctl.h	2025-04-13 17:25:47.640056795 +0200
-@@ -1142,6 +1142,16 @@
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_ioctl.h	2025-04-14 18:22:52.991707531 +0200
+@@ -1142,6 +1142,17 @@
      NV_STATUS rmStatus;     // OUT
  } UVM_IS_8_SUPPORTED_PARAMS;
  
@@ -35,6 +55,7 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
 +typedef struct
 +{
 +    NvProcessorUuid gpu_uuid;                      // IN
++    NvS32           child_id;                      // IN
 +    NvU64           base_addr  NV_ALIGN_BYTES(8);  // IN
 +    NvU64           dump_size;                     // IN
 +    NvU64           out_addr   NV_ALIGN_BYTES(8);  // OUT
@@ -45,8 +66,8 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
  }
 diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_tools.c NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.c
 --- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_tools.c	2025-03-14 13:57:31.000000000 +0100
-+++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.c	2025-04-13 17:25:47.647054052 +0200
-@@ -2860,3 +2860,83 @@
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.c	2025-04-14 18:22:52.998707457 +0200
+@@ -2860,3 +2860,105 @@
  
      _uvm_tools_destroy_cache_all();
  }
@@ -64,18 +85,38 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
 +    uvm_mem_t *gpu_mem = NULL;
 +    uvm_gpu_address_t cpu_addr;
 +    uvm_gpu_address_t gpu_addr;
++    char gpu_uuid_buffer[UVM_UUID_STRING_LENGTH];
 +    
 +    uvm_gpu_t *gpu;
++    uvm_parent_gpu_t *parent_gpu;
 +    uvm_push_t push;
 +    
 +    NV_STATUS status = NV_OK;
 +    
 +    //NvU64 gpuSize = UVM_CHUNK_SIZE_MAX;
 +    
-+    // get GPU from the passed UUID
-+    gpu = uvm_gpu_get_by_uuid(&params->gpu_uuid);
-+    if (!gpu)
++    // Added by meowmeowxw
++    // There are two scenarios:
++    // 1. MIG Disabled: The parent and child GPU UUID are the same
++    // 2. MIG Enabled:
++    //    - The parent UUID is the physical GPU UUID (GPU-xxxx...)
++    //    - The child UUID is the GPU instance UUID (GI-xxxx...), which is different from the MIG UUID (MIG-xxxx...)
++    // Using this method (first fetch the parent, then the child), it is possible to dump memory for MIG devices.
++    uvm_uuid_string(gpu_uuid_buffer, &params->gpu_uuid);
++    parent_gpu = uvm_parent_gpu_get_by_uuid(&params->gpu_uuid);
++    if (!parent_gpu) {
++        printk(KERN_ERR "uvm_api_dump_gpu_memory parent gpu not found with uuid: %s\n", gpu_uuid_buffer);
 +        return NV_ERR_INVALID_DEVICE;
++
++    }
++    if (test_bit(params->child_id, parent_gpu->valid_gpus)) {
++        gpu = parent_gpu->gpus[params->child_id];
++        uvm_uuid_string(gpu_uuid_buffer, &gpu->uuid);
++        printk(KERN_INFO "uvm_api_dump_gpu_memory child gpu %d uuid: %s\n", params->child_id, gpu_uuid_buffer);
++    } else {
++        printk(KERN_ERR "uvm_api_dump_gpu_memory child gpu %d not found\n", params->child_id);
++        return NV_ERR_INVALID_DEVICE;
++    }
 +    
 +    // allocate a CPU memory buffer and map it for access
 +    status = uvm_mem_alloc_sysmem_and_map_cpu_kernel(UVM_CHUNK_SIZE_MAX, current->mm, &cpu_mem);
@@ -92,14 +133,16 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
 +    status = uvm_mem_map_gpu_kernel(gpu_mem, gpu);
 +    if (status != NV_OK)
 +        goto done;
-+    printk("GPU mem chunk size 0x%lx\n", gpu_mem->chunk_size);
++    printk("GPU mem chunk size 0x%llx\n", gpu_mem->chunk_size);
 +    
 +    cpu_addr = uvm_mem_gpu_address_virtual_kernel(cpu_mem, gpu);
 +    gpu_addr = uvm_mem_gpu_address_physical(gpu_mem, gpu, 0, gpu_mem->chunk_size);
-+    printk("GPU mem address 0x%lx\n", gpu_addr.address);
++    printk("GPU mem address 0x%llx\n", gpu_addr.address);
 +    
 +    // dump GPU memory from the base_addr for the size of dump_size
 +    gpu_addr.address = base_addr;
++    printk(KERN_INFO "uvm_api_dump_gpu_memory instance phys start: 0x%llx, instance size: 0x%llx, gpu_addr.address: 0x%llx\n", \
++            gpu->mem_info.phys_start, gpu->mem_info.size, gpu_addr.address);
 +    offset = 0;
 +    while (offset < dump_size) {
 +        size_t cpy_size = min(UVM_CHUNK_SIZE_MAX, dump_size - offset);
@@ -132,7 +175,7 @@ diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/u
 +
 diff '--color=auto' -ruN NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_tools.h NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.h
 --- NVIDIA-Linux-x86_64-570.133.07/kernel-open/nvidia-uvm/uvm_tools.h	2025-03-14 13:57:31.000000000 +0100
-+++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.h	2025-04-13 17:25:47.647054052 +0200
++++ NVIDIA-Linux-x86_64-570.133.07-patched/kernel-open/nvidia-uvm/uvm_tools.h	2025-04-14 18:22:52.998707457 +0200
 @@ -43,6 +43,10 @@
                                                      struct file *filp);
  NV_STATUS uvm_api_tools_flush_events(UVM_TOOLS_FLUSH_EVENTS_PARAMS *params, struct file *filp);

@@ -80,3 +80,5 @@ Now, you can use our GPU memory dumper to dump GPU memory. For example, the foll
 - -b specifies the number of bytes to dump. 
 
 - -o specifies the file to which the GPU memory is dumped. 
+
+- -g optionally specify the active GPU instance (GI). The index depends on the order in which the instances were launched (0 for the first, 1 for the second, etc.). Defaults to 0 if only one instance is active.

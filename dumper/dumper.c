@@ -12,60 +12,6 @@
 #include <nvtypes.h>
 #include <uvm_linux_ioctl.h>
 
-// static int uvm_hex_to_digit(char c) {
-//     if (c >= '0' && c <= '9') return c - '0';
-//     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-//     return -1;
-// }
-// 
-// bool uvm_uuid_from_string(uint8_t *uuid, const char *str) {
-//     if (!uuid || !str) return false;
-// 
-//     int byte_idx = 0;
-//     int char_idx = 0;
-//     int digit1, digit2;
-// 
-//     while (byte_idx < 36) {
-//         if (byte_idx == 4 || byte_idx == 6 || byte_idx == 8 || byte_idx == 10) {
-//             if (str[char_idx] != '-') return false;
-//             char_idx++;
-//         }
-// 
-//         digit1 = uvm_hex_to_digit(str[char_idx++]);
-//         if (digit1 < 0) return false;
-// 
-//         digit2 = uvm_hex_to_digit(str[char_idx++]);
-//         if (digit2 < 0) return false;
-// 
-//         uuid[byte_idx++] = (uint8_t)((digit1 << 4) | digit2);
-//     }
-// }
-// 
-// char uvm_digit_to_hex(unsigned value)
-// {
-//     if (value >= 10)
-//         return value - 10 + 'a';
-//     else
-//         return value + '0';
-// }
-// 
-// void uvm_uuid_string(char *buffer, uint8_t *uuid)
-// {
-//     char *str = buffer;
-//     unsigned i;
-//     unsigned dashMask = 1 << 4 | 1 << 6 | 1 << 8 | 1 << 10;
-// 
-//     for (i = 0; i < 16; i++) {
-//         *str++ = uvm_digit_to_hex(uuid[i] >> 4);
-//         *str++ = uvm_digit_to_hex(uuid[i] & 0xF);
-// 
-//         if (dashMask & (1 << (i + 1)))
-//             *str++ = '-';
-//     }
-// 
-//     *str = 0;
-// }
-
 int 
 main(int argc, char *argv[])
 {
@@ -77,8 +23,7 @@ main(int argc, char *argv[])
   int dump_fd = -1;
   unsigned long dump_size = 0;
   unsigned long base_addr = 0;
-  int mig_id = -1;
-  unsigned int gpu_instance_id = 0;
+  int gpu_instance_id = 0;
   char *dump_file = NULL;
   void *dump_ptr = NULL;
   
@@ -94,7 +39,7 @@ main(int argc, char *argv[])
   UVM_DUMP_GPU_MEMORY_PARAMS  dump_params = {0};
   
   // parse arguments
-  while ((opt = getopt(argc, argv, "b:d:o:s:m:")) != -1) {
+  while ((opt = getopt(argc, argv, "b:d:o:s:g:")) != -1) {
     printf("%s\n", optarg);
     switch (opt) {
       case 'b':
@@ -109,8 +54,8 @@ main(int argc, char *argv[])
       case 's':
         base_addr = strtoul(optarg, NULL, 0);
         break;
-      case 'm':
-        mig_id = atoi(optarg);
+      case 'g':
+        gpu_instance_id = atoi(optarg);
         break;
     }
   }  
@@ -135,9 +80,9 @@ main(int argc, char *argv[])
     goto cleanup;
   }
   
-  // It doesn't matter because the MIG UUID is different than the GPU UUID
-  // if (mig_id != -1) {
-  //     nvml_ret = nvmlDeviceGetMigDeviceHandleByIndex(nvml_dev, mig_id, &nvml_dev_mig);
+  // It doesn't matter because the MIG UUID is different from the GPU UUID
+  // if (gpu_instance_id != -1) {
+  //     nvml_ret = nvmlDeviceGetMigDeviceHandleByIndex(nvml_dev, gpu_instance_id, &nvml_dev_mig);
   //     if (nvml_ret != NVML_SUCCESS) {
   //       printf("cannot get mig device: %s\n", nvmlErrorString(nvml_ret));
   //       goto cleanup;
@@ -153,9 +98,8 @@ main(int argc, char *argv[])
     printf("cannot get device UUID: %s\n", nvmlErrorString(nvml_ret));
     goto cleanup;
   }
-  dump_params.child_id = -1;
   
-  printf("UUID: %s\n", nvml_uuid);
+  printf("[!] UUID: %s\n", nvml_uuid);
 
   uuid_str = nvml_uuid + 4;
   for (i = 0; i < 16; ++i) {
@@ -201,7 +145,7 @@ main(int argc, char *argv[])
   }
   
   memcpy(&(dump_params.gpu_uuid), &(reg_params.gpu_uuid), 16);
-  dump_params.child_id = mig_id;
+  dump_params.child_id = gpu_instance_id;
   dump_params.base_addr = base_addr;
   dump_params.dump_size = dump_size;
   dump_params.out_addr = (unsigned long)dump_ptr;
