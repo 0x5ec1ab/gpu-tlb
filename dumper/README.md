@@ -8,7 +8,7 @@ First, chose a supported version and set the environment variable accordingly:
 - `export NV_DRV_VERSION=535.113`
 - `export NV_DRV_VERSION=555.58.02`
 - `export NV_DRV_VERSION=560.35.03`
-- `export NV_DRV_VERSION=570.133.07`
+- `export NV_DRV_VERSION=570.133.07; export NV_KERNEL_OPEN=1` (The patch for 570.133.07 works on the open-kernel version)
 
 > If the version you want to use is not supported, you can try to apply the closest patch, but this might not work if one of the files to be patched has been modified.
 > In that case, you should patch it manually by just adding the functions and the definitions you can find in one of the patches.
