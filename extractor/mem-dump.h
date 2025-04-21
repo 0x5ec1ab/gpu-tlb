@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cstdint>
 
 /*******************************************************************************
  *
@@ -17,9 +18,10 @@ class MemDump {
   int           mFd;
   void *        mBasePtr;
   std::uint64_t mLen;
+  std::uint64_t mPhysOffset;
   
 public:
-  MemDump(const char *);
+  MemDump(const char *, std::uint64_t physOffset = 0);
   
   ~MemDump();
   
