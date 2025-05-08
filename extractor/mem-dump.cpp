@@ -3,7 +3,8 @@
 /*******************************************************************************
  *
  ******************************************************************************/
-MemDump::MemDump(const char *fileName)
+MemDump::MemDump(const char *fileName, std::uint64_t physOffset)
+: mPhysOffset(physOffset)
 {
   mFd = open(fileName, O_RDONLY);
   if (mFd < 0)
@@ -39,13 +40,15 @@ MemDump::getChunkNum()
 /*******************************************************************************
  *
  ******************************************************************************/
-std::uint8_t 
-MemDump::getByte(std::uint64_t offset)
+std::uint8_t
+MemDump::getByte(std::uint64_t physAddress)
 {
-  if (offset < mLen)
-    return *((std::uint8_t *)mBasePtr + offset);
-  else
+  if (physAddress < mPhysOffset)
     return 0;
+  std::uint64_t fileOff = physAddress - mPhysOffset;
+  if (fileOff < mLen)
+    return *((std::uint8_t *)mBasePtr + fileOff);
+  return 0;
 }
 
 

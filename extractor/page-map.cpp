@@ -1,4 +1,5 @@
 #include "page-map.h"
+#include "common.h"
 
 /*******************************************************************************
  *
@@ -24,7 +25,7 @@ PageMap::constructTrans()
 {
   // PD3 has 4 entries, but PD2 and PD1 has 512 entries
   int entNum = mTransType == PD3 ? 4 : 512;
-  int entSize = 4096 / entNum;
+  int entSize = 8;
   
   for (int i = 0; i < entNum; ++i) {
     std::uint64_t offset = mPhyAddr + i * entSize;
@@ -43,7 +44,7 @@ PageMap::constructTrans()
     }
     addr &= 0x0000000FFFFFFFFF;
     addr >>= 8;
-    
+
     std::uint8_t flag = mMemDump.getByte(offset);
     flag &= 0x07;
     
@@ -51,11 +52,12 @@ PageMap::constructTrans()
       continue;
     else if (flag != 0x02)
       continue;
-    
+
     // construct the next-level trans
     TransType nTransType = mTransType == PD3 ? PD2 : 
                            mTransType == PD2 ? PD1 : PD0;
     std::uint64_t nPhyAddr = addr << 12;
+    nPhyAddr += vgpuOffset;
     
     Trans *next = nullptr;
     if (nTransType == PD0)

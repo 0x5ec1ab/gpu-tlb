@@ -1,4 +1,5 @@
 #include "page-dir.h"
+#include "common.h"
 
 /*******************************************************************************
  *
@@ -59,6 +60,7 @@ PageDir::constructTrans()
     if (flagSmall == 0x00 && flagLarge == 0x01) {
       std::uint64_t addrHuge = addrLarge >> 4;
       std::uint64_t nPhyAddr = addrHuge << 12;
+      nPhyAddr += vgpuOffset;
       
       std::uint8_t flagHuge = mMemDump.getByte(offsetLarge);
       Trans *next = new Page(mMemDump, nPhyAddr, HUGE, flagHuge);
@@ -72,6 +74,7 @@ PageDir::constructTrans()
     // construct PT for SMALL pages 
     if (flagSmall == 0x02) {      
       std::uint64_t nPhyAddr = addrSmall << 12;      
+      nPhyAddr += vgpuOffset;
       nextSmall = new PageTab(mMemDump, nPhyAddr, PT, SMALL);
       bool ok = nextSmall->constructTrans();
       if (!ok) {
@@ -83,6 +86,7 @@ PageDir::constructTrans()
     // construct PT for LARGE pages 
     if (flagLarge == 0x02) {
       std::uint64_t nPhyAddr = addrLarge << 8;      
+      nPhyAddr += vgpuOffset;
       nextLarge = new PageTab(mMemDump, nPhyAddr, PT, LARGE);
       bool ok = nextLarge->constructTrans();
       if (!ok) {
