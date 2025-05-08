@@ -11,6 +11,7 @@
 #include "page-dir.h"
 #include "page-tab.h"
 #include "page.h"
+#include "common.h"
 
 /*******************************************************************************
  *
@@ -18,13 +19,15 @@
 int 
 main(int argc, char *argv[])
 {
-  if (argc < 2 || argc > 3) {
-    std::cout << "Usage: " << argv[0] << " <dump> [physical‑offset]\n";
+  if (argc < 2 || argc > 4) {
+    std::cout << "Usage: " << argv[0] << " <dump> [physical‑offset] [vgpu-offset]\n";
     return -1;
   }
   std::uint64_t physOffset = 0;
   if (argc == 3)
     physOffset = std::strtoull(argv[2], nullptr, 0);
+  if (argc == 4)
+    vgpuOffset = std::strtoull(argv[3], nullptr, 0);
 
   MemDump dump(argv[1], physOffset);
 

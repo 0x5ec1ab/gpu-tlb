@@ -1,4 +1,5 @@
 #include "page-map.h"
+#include "common.h"
 
 /*******************************************************************************
  *
@@ -56,6 +57,7 @@ PageMap::constructTrans()
     TransType nTransType = mTransType == PD3 ? PD2 : 
                            mTransType == PD2 ? PD1 : PD0;
     std::uint64_t nPhyAddr = addr << 12;
+    nPhyAddr += vgpuOffset;
     
     Trans *next = nullptr;
     if (nTransType == PD0)

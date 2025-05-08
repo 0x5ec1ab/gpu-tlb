@@ -1,4 +1,5 @@
 #include "page-tab.h"
+#include "common.h"
 
 /*******************************************************************************
  *
@@ -45,6 +46,7 @@ PageTab::constructTrans()
       return false;
     
     std::uint64_t nPhyAddr = addr << 12;
+    nPhyAddr += vgpuOffset;
     
     Trans *next = new Page(mMemDump, nPhyAddr, mPageType, flagRaw);
     mPageTabEnts[i] = next;
